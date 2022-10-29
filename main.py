@@ -1,5 +1,3 @@
-from msilib.schema import MsiAssembly
-import re
 import aiogram.utils.markdown as md
 from aiogram import Bot, Dispatcher, types
 from aiogram.dispatcher import Dispatcher
@@ -12,10 +10,9 @@ from aiogram.types import ReplyKeyboardRemove, \
     ReplyKeyboardMarkup, KeyboardButton, \
     InlineKeyboardMarkup, InlineKeyboardButton
 import Config as config
-from button import Auth, Menu, CancelCreate #Next_step, Start, Menu, End, Next_ques
+from button import Auth, Menu, CancelCreate
 import psycopg2
-import ast
-
+from datetime import datetime
 
 # Подключение к postgres
 def connect_db():
@@ -103,15 +100,34 @@ async def Exit_Quiz(callback: types.CallbackQuery, state: FSMContext):
 async def process_name(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['Name'] = message.text
-    await message.answer('Введите дату собрания:', reply_markup=CancelCreate())
+    await message.answer('Введите дату собрания в формате ДД.ММ.ГГГГ:', reply_markup=CancelCreate())
     await CreateMeeting.Date.set()
 
 @dp.message_handler(state=CreateMeeting.Date)
 async def process_name(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['Date'] = message.text
-    await message.answer('Введите время собрания:', reply_markup=CancelCreate())
-    await CreateMeeting.Time.set()
+
+    data = datetime.strptime(data['Date'], "%d.%m.%Y").date()
+    #dataNow = datetime.strptime(data['Date'], "%d.%m.%Y").date()
+    if data >= datetime.now().date():
+        print(1)
+        con = connect_db()
+        cur = con.cursor()
+        cur.execute(
+            f'''\
+            INSERT INTO worker VALUES\
+            (10, '{datetime.strptime(data['Date'], "%d.%m.%Y").date()}', 'bdr', '1234');\
+            '''
+        )
+        con.commit()
+        await CreateMeeting.Time.set()
+        await message.answer('Введите время собрания в формате ЧЧ:ММ', reply_markup=CancelCreate())
+    else:
+        print(0)
+        await message.answer('Введите дату собрания в формате ДД.ММ.ГГГГ:', reply_markup=CancelCreate())
+        await CreateMeeting.Date.set()
+
 
 @dp.message_handler(state=CreateMeeting.Time)
 async def process_name(message: types.Message, state: FSMContext):
@@ -125,12 +141,12 @@ async def process_name(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['Place'] = message.text
     await CreateMeeting.Time.set()    
-    print(f'''
-        {md.code(data['Name'])}\n
-        {md.code(data['Date'])}\n
-        {md.code(data['Time'])}\n
-        {md.code(data['Place'])}\n
-    ''')
+    # print(f'''
+    #     {md.code(data['Name'])}\n
+    #     {md.code(data['Date'])}\n
+    #     {md.code(data['Time'])}\n
+    #     {md.code(data['Place'])}\n
+    # ''')
 
 
 

@@ -1,4 +1,5 @@
 from msilib.schema import MsiAssembly
+import re
 import aiogram.utils.markdown as md
 from aiogram import Bot, Dispatcher, types
 from aiogram.dispatcher import Dispatcher
@@ -11,7 +12,7 @@ from aiogram.types import ReplyKeyboardRemove, \
     ReplyKeyboardMarkup, KeyboardButton, \
     InlineKeyboardMarkup, InlineKeyboardButton
 import Config as config
-from button import Start, Auth #Next_step, Start, Menu, End, Next_ques
+from button import Auth, Menu #Next_step, Start, Menu, End, Next_ques
 import psycopg2
 import ast
 
@@ -65,23 +66,24 @@ async def process_name(message: types.Message, state: FSMContext):
 
     Login = md.code(data['Login']).replace("`", "")
     Password = md.code(data['Password']).replace("`", "")
-    
+
     await message.delete()
 
     con = connect_db()
     cur = con.cursor()
     cur.execute(
             f'''\
-            SELECT fio FROM workers
+            SELECT name_worker, otch_worker FROM worker
             WHERE login = '{Login}' and password = '{Password}'
             '''
         )
 
     rows = cur.fetchall()
     if len(rows) == 1:
-        await message.answer(f'Добро пожаловать, {rows[0][0]}', parse_mode='MarkdownV2')
+        await message.answer(f'Добро пожаловать, {rows[0][0]} {rows[0][1]}!', reply_markup=Menu())
+        await state.finish() 
     else:
-        await message.answer(f'Данного пользователя не существует.', reply_markup=Auth())
+        await message.answer(f'Неверный логин или пароль.', reply_markup=Auth())
         await state.finish()     
 
 

@@ -44,6 +44,13 @@ class Form(StatesGroup):
     Login = State()
     Password = State() 
 
+class CreateMeeting(StatesGroup):
+    Name = State()
+    Date = State()
+    Time = State()
+    Place = State()
+    Worker = State()
+
 
 # Вывод меню при команде /start
 @dp.message_handler(commands=['start'])
@@ -59,7 +66,7 @@ async def process_name(message: types.Message, state: FSMContext):
     await Form.Password.set()
 
 
-@dp.message_handler(state=Form.Password)
+@dp.message_handler(state=Form.Password,)
 async def process_name(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['Password'] = message.text
@@ -81,7 +88,6 @@ async def process_name(message: types.Message, state: FSMContext):
     rows = cur.fetchall()
     if len(rows) == 1:
         await message.answer(f'Добро пожаловать, {rows[0][0]} {rows[0][1]}!', reply_markup=Menu())
-        await state.finish() 
     else:
         await message.answer(f'Неверный логин или пароль.', reply_markup=Auth())
         await state.finish()     
@@ -92,6 +98,46 @@ async def Exit_Quiz(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.edit_text("Введите свой логин:")
     await Form.Login.set()
     await callback.answer()        
+
+
+@dp.callback_query_handler(text="Create meeting", state='*')
+async def Exit_Quiz(callback: types.CallbackQuery, state: FSMContext):
+    await callback.message.edit_text('Введите имя (назначение) собрания:')
+    await CreateMeeting.Name.set()
+
+@dp.message_handler(state=CreateMeeting.Name)
+async def process_name(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['Name'] = message.text
+    await message.answer('Введите дату собрания:')
+    await CreateMeeting.Date.set()
+
+@dp.message_handler(state=CreateMeeting.Date)
+async def process_name(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['Date'] = message.text
+    await message.answer('Введите время собрания:')
+    await CreateMeeting.Time.set()
+
+@dp.message_handler(state=CreateMeeting.Time)
+async def process_name(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['Time'] = message.text
+    await message.answer('Введите место собрания:')
+    await CreateMeeting.Place.set()
+
+@dp.message_handler(state=CreateMeeting.Place)
+async def process_name(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['Place'] = message.text
+    await CreateMeeting.Time.set()    
+    print(f'''
+        {md.code(data['Name'])}\n
+        {md.code(data['Date'])}\n
+        {md.code(data['Time'])}\n
+        {md.code(data['Place'])}\n
+    ''')
+
 
 if __name__ == '__main__':
     executor.start_polling(dp)

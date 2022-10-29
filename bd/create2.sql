@@ -22,7 +22,8 @@ CREATE TABLE event (
  id_event integer NOT NULL,
  event_name VARCHAR(120),
  date_event date,
- time_event time, 
+ time_event time,  
+ duration_event integer NOT NULL,
  place_event VARCHAR(40),
  PRIMARY KEY("id_event")); 
 

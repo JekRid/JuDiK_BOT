@@ -13,6 +13,15 @@ def Start():
     return keyboard
 
 
+def Auth():
+    buttons = [
+        [
+            types.InlineKeyboardButton(text="Попробовать снова", callback_data="Auth"),
+        ],
+
+    ]
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
+    return keyboard
 
 '''
 def Menu():

@@ -12,7 +12,7 @@ from aiogram.types import ReplyKeyboardRemove, \
 import Config as config
 from button import Auth, Menu, CancelCreate
 import psycopg2
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Подключение к postgres
 def connect_db():
@@ -52,7 +52,7 @@ class CreateMeeting(StatesGroup):
 # Вывод меню при команде /start
 @dp.message_handler(commands=['start'])
 async def start_command(message: types.Message):
-    await message.answer("Привет!\nВведите свой логин:")
+    await message.reply("Привет!\nВведите свой логин:")
     await Form.Login.set()
 
 
@@ -108,23 +108,12 @@ async def process_name(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['Date'] = message.text
 
-    data = datetime.strptime(data['Date'], "%d.%m.%Y").date()
+    date = datetime.strptime(data['Date'], "%d.%m.%Y").date()
     #dataNow = datetime.strptime(data['Date'], "%d.%m.%Y").date()
-    if data >= datetime.now().date():
-        print(1)
-        con = connect_db()
-        cur = con.cursor()
-        cur.execute(
-            f'''\
-            INSERT INTO worker VALUES\
-            (10, '{datetime.strptime(data['Date'], "%d.%m.%Y").date()}', 'bdr', '1234');\
-            '''
-        )
-        con.commit()
+    if date >= datetime.now().date():
         await CreateMeeting.Time.set()
         await message.answer('Введите время собрания в формате ЧЧ:ММ', reply_markup=CancelCreate())
     else:
-        print(0)
         await message.answer('Введите дату собрания в формате ДД.ММ.ГГГГ:', reply_markup=CancelCreate())
         await CreateMeeting.Date.set()
 
@@ -133,20 +122,53 @@ async def process_name(message: types.Message, state: FSMContext):
 async def process_name(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['Time'] = message.text
-    await message.answer('Введите место собрания:', reply_markup=CancelCreate())
-    await CreateMeeting.Place.set()
+
+    time = datetime.now().strptime(data['Time'], "%H:%M").time()
+    date = datetime.strptime(md.code(data['Date']).replace("`", "").replace("\\", ""), "%d.%m.%Y").date()
+    timeand15 = (datetime.now()+timedelta(minutes=14)).strftime("%H:%M") # Добавление 15 (14) минут
+
+    if (date == datetime.now().date()) and (time > datetime.now().strptime(timeand15, "%H:%M").time()):
+        await CreateMeeting.Place.set()
+        await message.answer('Введите место собрания:', reply_markup=CancelCreate())
+    elif (date > datetime.now().date()):
+        await CreateMeeting.Place.set()
+        await message.answer('Введите место собрания:', reply_markup=CancelCreate())
+    else:
+        await message.answer('Введите время собрания в формате ЧЧ:ММ:', reply_markup=CancelCreate())
+        await CreateMeeting.Time.set()
+
+#datetime.datetime.now().strptime('21:04', "%H:%M").time()
 
 @dp.message_handler(state=CreateMeeting.Place)
 async def process_name(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['Place'] = message.text
-    await CreateMeeting.Time.set()    
-    # print(f'''
-    #     {md.code(data['Name'])}\n
-    #     {md.code(data['Date'])}\n
-    #     {md.code(data['Time'])}\n
-    #     {md.code(data['Place'])}\n
-    # ''')
+
+    Name = md.code(data['Name']).replace("`", "").replace("\\", "")
+    Date = md.code(data['Date']).replace("`", "").replace("\\", "")
+    Time = md.code(data['Time']).replace("`", "").replace("\\", "")
+    Place = md.code(data['Place']).replace("`", "").replace("\\", "")
+
+    con = connect_db()
+    cur = con.cursor()
+    cur.execute(
+            f'''\
+            SELECT MAX(id_event) FROM event
+            '''
+    )
+    rows = cur.fetchall()
+
+    cur.execute(
+            f'''\
+            INSERT INTO event VALUES
+            ({rows[0][0]+1}, '{Name}', '{Date}', '{Time}', '{Place}');
+            '''
+        )
+    con.commit()
+
+    
+
+    #await CreateMeeting.Time.set()    
 
 
 

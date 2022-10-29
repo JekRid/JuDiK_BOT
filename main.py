@@ -1,4 +1,3 @@
-from msilib.schema import MsiAssembly
 import aiogram.utils.markdown as md
 from aiogram import Bot, Dispatcher, types
 from aiogram.dispatcher import Dispatcher
@@ -11,10 +10,9 @@ from aiogram.types import ReplyKeyboardRemove, \
     ReplyKeyboardMarkup, KeyboardButton, \
     InlineKeyboardMarkup, InlineKeyboardButton
 import Config as config
-from button import Start, Auth #Next_step, Start, Menu, End, Next_ques
+from button import Auth, Menu, CancelCreate
 import psycopg2
-import ast
-
+from datetime import datetime
 
 # Подключение к postgres
 def connect_db():
@@ -43,12 +41,20 @@ class Form(StatesGroup):
     Login = State()
     Password = State() 
 
+class CreateMeeting(StatesGroup):
+    Name = State()
+    Date = State()
+    Time = State()
+    Place = State()
+    Worker = State()
+
 
 # Вывод меню при команде /start
 @dp.message_handler(commands=['start'])
 async def start_command(message: types.Message):
     await message.answer("Привет!\nВведите свой логин:")
     await Form.Login.set()
+
 
 @dp.message_handler(state=Form.Login)
 async def process_name(message: types.Message, state: FSMContext):
@@ -58,38 +64,106 @@ async def process_name(message: types.Message, state: FSMContext):
     await Form.Password.set()
 
 
-@dp.message_handler(state=Form.Password)
+@dp.message_handler(state=Form.Password,)
 async def process_name(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['Password'] = message.text
 
     Login = md.code(data['Login']).replace("`", "")
     Password = md.code(data['Password']).replace("`", "")
-    
+
     await message.delete()
 
     con = connect_db()
     cur = con.cursor()
     cur.execute(
             f'''\
-            SELECT fio FROM workers
+            SELECT name_worker, otch_worker FROM worker
             WHERE login = '{Login}' and password = '{Password}'
             '''
         )
 
     rows = cur.fetchall()
     if len(rows) == 1:
-        await message.answer(f'Добро пожаловать, {rows[0][0]}', parse_mode='MarkdownV2')
+        await message.answer(f'Добро пожаловать, {rows[0][0]} {rows[0][1]}!', reply_markup=Menu())
     else:
-        await message.answer(f'Данного пользователя не существует.', reply_markup=Auth())
+        await message.answer(f'Неверный логин или пароль.', reply_markup=Auth())
         await state.finish()     
+        
 
-
-@dp.callback_query_handler(text="Auth")
+@dp.callback_query_handler(text="Create meeting", state='*')
 async def Exit_Quiz(callback: types.CallbackQuery, state: FSMContext):
+    await callback.message.edit_text('Введите имя (назначение) собрания:', reply_markup=CancelCreate())
+    await CreateMeeting.Name.set()
+
+@dp.message_handler(state=CreateMeeting.Name)
+async def process_name(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['Name'] = message.text
+    await message.answer('Введите дату собрания в формате ДД.ММ.ГГГГ:', reply_markup=CancelCreate())
+    await CreateMeeting.Date.set()
+
+@dp.message_handler(state=CreateMeeting.Date)
+async def process_name(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['Date'] = message.text
+
+    data = datetime.strptime(data['Date'], "%d.%m.%Y").date()
+    #dataNow = datetime.strptime(data['Date'], "%d.%m.%Y").date()
+    if data >= datetime.now().date():
+        print(1)
+        con = connect_db()
+        cur = con.cursor()
+        cur.execute(
+            f'''\
+            INSERT INTO worker VALUES\
+            (10, '{datetime.strptime(data['Date'], "%d.%m.%Y").date()}', 'bdr', '1234');\
+            '''
+        )
+        con.commit()
+        await CreateMeeting.Time.set()
+        await message.answer('Введите время собрания в формате ЧЧ:ММ', reply_markup=CancelCreate())
+    else:
+        print(0)
+        await message.answer('Введите дату собрания в формате ДД.ММ.ГГГГ:', reply_markup=CancelCreate())
+        await CreateMeeting.Date.set()
+
+
+@dp.message_handler(state=CreateMeeting.Time)
+async def process_name(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['Time'] = message.text
+    await message.answer('Введите место собрания:', reply_markup=CancelCreate())
+    await CreateMeeting.Place.set()
+
+@dp.message_handler(state=CreateMeeting.Place)
+async def process_name(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['Place'] = message.text
+    await CreateMeeting.Time.set()    
+    # print(f'''
+    #     {md.code(data['Name'])}\n
+    #     {md.code(data['Date'])}\n
+    #     {md.code(data['Time'])}\n
+    #     {md.code(data['Place'])}\n
+    # ''')
+
+
+
+@dp.callback_query_handler(text=["Auth", "Cancel"], state='*')
+async def Exit_Quiz(callback: types.CallbackQuery, state: FSMContext):
+    await state.finish()
     await callback.message.edit_text("Введите свой логин:")
     await Form.Login.set()
-    await callback.answer()        
+    await callback.answer()  
+
+
+@dp.callback_query_handler(text=["Cancel Create"], state='*')
+async def Exit_Quiz(callback: types.CallbackQuery, state: FSMContext):
+    await state.finish()
+    await callback.message.answer("Введите свой логин:")
+    await Form.Login.set()
+    await callback.answer()  
 
 if __name__ == '__main__':
     executor.start_polling(dp)

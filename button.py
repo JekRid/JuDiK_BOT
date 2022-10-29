@@ -23,6 +23,16 @@ def Auth():
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
     return keyboard
 
+def CancelCreate():
+    buttons = [
+        [
+            types.InlineKeyboardButton(text="Прервать сессию", callback_data="Cancel Create"),
+        ],
+
+    ]
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
+    return keyboard
+
 def Menu():
     buttons = [
         [

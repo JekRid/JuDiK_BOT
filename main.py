@@ -12,7 +12,7 @@ from aiogram.types import ReplyKeyboardRemove, \
     ReplyKeyboardMarkup, KeyboardButton, \
     InlineKeyboardMarkup, InlineKeyboardButton
 import Config as config
-from button import Auth, Menu #Next_step, Start, Menu, End, Next_ques
+from button import Auth, Menu, CancelCreate #Next_step, Start, Menu, End, Next_ques
 import psycopg2
 import ast
 
@@ -58,6 +58,7 @@ async def start_command(message: types.Message):
     await message.answer("Привет!\nВведите свой логин:")
     await Form.Login.set()
 
+
 @dp.message_handler(state=Form.Login)
 async def process_name(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
@@ -91,39 +92,32 @@ async def process_name(message: types.Message, state: FSMContext):
     else:
         await message.answer(f'Неверный логин или пароль.', reply_markup=Auth())
         await state.finish()     
-
-
-@dp.callback_query_handler(text="Auth")
-async def Exit_Quiz(callback: types.CallbackQuery, state: FSMContext):
-    await callback.message.edit_text("Введите свой логин:")
-    await Form.Login.set()
-    await callback.answer()        
-
+        
 
 @dp.callback_query_handler(text="Create meeting", state='*')
 async def Exit_Quiz(callback: types.CallbackQuery, state: FSMContext):
-    await callback.message.edit_text('Введите имя (назначение) собрания:')
+    await callback.message.edit_text('Введите имя (назначение) собрания:', reply_markup=CancelCreate())
     await CreateMeeting.Name.set()
 
 @dp.message_handler(state=CreateMeeting.Name)
 async def process_name(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['Name'] = message.text
-    await message.answer('Введите дату собрания:')
+    await message.answer('Введите дату собрания:', reply_markup=CancelCreate())
     await CreateMeeting.Date.set()
 
 @dp.message_handler(state=CreateMeeting.Date)
 async def process_name(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['Date'] = message.text
-    await message.answer('Введите время собрания:')
+    await message.answer('Введите время собрания:', reply_markup=CancelCreate())
     await CreateMeeting.Time.set()
 
 @dp.message_handler(state=CreateMeeting.Time)
 async def process_name(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['Time'] = message.text
-    await message.answer('Введите место собрания:')
+    await message.answer('Введите место собрания:', reply_markup=CancelCreate())
     await CreateMeeting.Place.set()
 
 @dp.message_handler(state=CreateMeeting.Place)
@@ -138,6 +132,22 @@ async def process_name(message: types.Message, state: FSMContext):
         {md.code(data['Place'])}\n
     ''')
 
+
+
+@dp.callback_query_handler(text=["Auth", "Cancel"], state='*')
+async def Exit_Quiz(callback: types.CallbackQuery, state: FSMContext):
+    await state.finish()
+    await callback.message.edit_text("Введите свой логин:")
+    await Form.Login.set()
+    await callback.answer()  
+
+
+@dp.callback_query_handler(text=["Cancel Create"], state='*')
+async def Exit_Quiz(callback: types.CallbackQuery, state: FSMContext):
+    await state.finish()
+    await callback.message.answer("Введите свой логин:")
+    await Form.Login.set()
+    await callback.answer()  
 
 if __name__ == '__main__':
     executor.start_polling(dp)

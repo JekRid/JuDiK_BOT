@@ -49,6 +49,17 @@ def Menu():
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
     return keyboard
 
+def Continue():
+    buttons = [
+        [
+            types.InlineKeyboardButton(text="Завершить", callback_data="Continue"),
+        ],
+
+
+    ]
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
+    return keyboard
+
 '''
 def Menu():
     buttons = [

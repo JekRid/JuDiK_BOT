@@ -11,7 +11,7 @@ from aiogram.types import ReplyKeyboardRemove, \
     ReplyKeyboardMarkup, KeyboardButton, \
     InlineKeyboardMarkup, InlineKeyboardButton
 import Config as config
-from button import Start #Next_step, Start, Menu, End, Next_ques
+from button import Start, Auth #Next_step, Start, Menu, End, Next_ques
 import psycopg2
 import ast
 
@@ -47,14 +47,14 @@ class Form(StatesGroup):
 # Вывод меню при команде /start
 @dp.message_handler(commands=['start'])
 async def start_command(message: types.Message):
-    await message.reply("Привет!\nВведи свой логин:")
+    await message.answer("Привет!\nВведите свой логин:")
     await Form.Login.set()
 
 @dp.message_handler(state=Form.Login)
 async def process_name(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['Login'] = message.text
-    await message.reply('Введите пароль:')
+    await message.answer('Введите пароль:')
     await Form.Password.set()
 
 
@@ -65,14 +65,31 @@ async def process_name(message: types.Message, state: FSMContext):
 
     Login = md.code(data['Login']).replace("`", "")
     Password = md.code(data['Password']).replace("`", "")
-    await Form.Password.set()
+    
+    await message.delete()
 
-    if Login == "Admin" and Password == "Max":
-        print("Test")
+    con = connect_db()
+    cur = con.cursor()
+    cur.execute(
+            f'''\
+            SELECT fio FROM workers
+            WHERE login = '{Login}' and password = '{Password}'
+            '''
+        )
+
+    rows = cur.fetchall()
+    if len(rows) == 1:
+        await message.answer(f'Добро пожаловать, {rows[0][0]}', parse_mode='MarkdownV2')
     else:
-        await message.reply(f'Ты не пройдешь!')
+        await message.answer(f'Данного пользователя не существует.', reply_markup=Auth())
+        await state.finish()     
 
 
+@dp.callback_query_handler(text="Auth")
+async def Exit_Quiz(callback: types.CallbackQuery, state: FSMContext):
+    await callback.message.edit_text("Введите свой логин:")
+    await Form.Login.set()
+    await callback.answer()        
 
 if __name__ == '__main__':
     executor.start_polling(dp)

@@ -20,10 +20,10 @@ insert into worker values
 
 
 insert into event values
-(1, 'event1', '2022/10/30', '22:30', 'zoom'),
-(2, 'event2', '2022/10/31', '18:20', 'hybrid'),
-(3, 'event3', '2022/11/04', '10:00', 'office'),
-(4, 'event4', '2022/11/02', '12:00', 'zoom');
+(1, 'event1', '2022-10-30', '22:30', 'zoom'),
+(2, 'event2', '2022-10-31', '18:20', 'hybrid'),
+(3, 'event3', '2022-11-04', '10:00', 'office'),
+(4, 'event4', '2022-11-02', '12:00', 'zoom');
 
 
 

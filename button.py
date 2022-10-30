@@ -36,10 +36,10 @@ def CancelCreate():
 def Menu():
     buttons = [
         [
-            types.InlineKeyboardButton(text="Назначить собрание", callback_data="Create meeting"),
+            types.InlineKeyboardButton(text="Запланировать собрание", callback_data="Create meeting"),
         ],
         [
-            types.InlineKeyboardButton(text="Предстоящие события", callback_data="Future meeting"),
+            types.InlineKeyboardButton(text="Предстоящие собрания", callback_data="Future meeting"),
         ],
         [
             types.InlineKeyboardButton(text="Выход", callback_data="Cancel"),
@@ -59,6 +59,8 @@ def Continue():
     ]
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
     return keyboard
+
+
 
 '''
 def Menu():

@@ -1,9 +1,3 @@
-	
-CREATE TABLE department(
-    id_dep integer NOT NULL,
-	dep_name VARCHAR(50),
-	PRIMARY KEY("id_dep"));
-	
 
 CREATE TABLE worker(
     id_worker integer NOT NULL,
@@ -11,11 +5,9 @@ CREATE TABLE worker(
     fam_worker VARCHAR(50),
 	name_worker VARCHAR(50),
 	otch_worker VARCHAR(50),
-	id_dep integer NOT NULL,
 	login VARCHAR(50),
 	password VARCHAR(50),
-	PRIMARY KEY("id_worker"),
-    FOREIGN KEY("id_dep") REFERENCES department("id_dep"));
+	PRIMARY KEY("id_worker"));
 	
 
 CREATE TABLE event (
